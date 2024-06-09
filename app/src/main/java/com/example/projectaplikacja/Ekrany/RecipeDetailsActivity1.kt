@@ -48,6 +48,8 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -58,7 +60,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.projectaplikacja.R
+import com.example.projectaplikacja.Viewmodels.RoomViewModel
+import com.example.projectaplikacja.Viewmodels.RoomViewModelFactory
 import com.example.projectaplikacja.ui.theme.ProjectAplikacjaTheme
 
 class RecipeDetailsActivity1 : ComponentActivity() {
@@ -72,7 +77,10 @@ class RecipeDetailsActivity1 : ComponentActivity() {
                     color = MaterialTheme.colorScheme.background
                 ) {
                     val recipeId = intent.getIntExtra("RECIPE_ID", -1)
-                    AppContent6(this,recipeId)
+                    val viewModel: RoomViewModel = viewModel(
+                        factory = RoomViewModelFactory(application)
+                    )
+                    AppContent6(this,recipeId,viewModel)
                 }
             }
         }
@@ -80,11 +88,15 @@ class RecipeDetailsActivity1 : ComponentActivity() {
 }
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AppContent6(context: Context, recipeId: Int) {
-    val recipe = recipes.find { it.id == recipeId }
+fun AppContent6(context: Context, recipeId: Int, viewModel: RoomViewModel) {
+    val recipe by viewModel.singleRecipeState.collectAsState()
 
     // Define a set to hold the indices of the checked checkboxes
     var checkedIndices by remember { mutableStateOf(setOf<Int>()) }
+
+    LaunchedEffect(recipeId) {
+        viewModel.fetchRecipeById(recipeId)
+    }
 
     if (recipe != null) {
         Box(
@@ -99,14 +111,17 @@ fun AppContent6(context: Context, recipeId: Int) {
                 Scaffold(
                     topBar = {
                         TopAppBar(
-                            title = { Text(text = recipe.name) },
+                            title = { Text(text = recipe!!.name) },
                             navigationIcon = {
-                                IconButton(onClick = { context.startActivity(Intent(context, MainActivity::class.java)) }) {
+                                IconButton(onClick = { context.startActivity(Intent(context, MainActivity::class.java))
+                                    if (context is RecipeDetailsActivity1) {
+                                        context.finish()
+                                    }}) {
                                     Icon(Icons.Default.ArrowBack, contentDescription = "Return")
                                 }
                             },
                             actions = {
-                                // Dodaj akcje tutaj, jeśli potrzebujesz
+                                // Add actions here if needed
                             }
                         )
                     },
@@ -117,7 +132,7 @@ fun AppContent6(context: Context, recipeId: Int) {
                             ) {
                                 item {
                                     Text(text = "Składniki:")
-                                    val ingredientsList = recipe.ingredients.split(", ")
+                                    val ingredientsList = recipe!!.ingredients.split(", ")
                                     ingredientsList.forEachIndexed { index, ingredient ->
                                         Row(verticalAlignment = Alignment.CenterVertically) {
                                             Checkbox(
@@ -148,7 +163,10 @@ fun AppContent6(context: Context, recipeId: Int) {
                                 IconButton(onClick = {
                                     val intent = Intent(context, RecipeDetailsActivity2::class.java)
                                     intent.putExtra("RECIPE_ID", recipeId)
-                                    context.startActivity(intent) }) {
+                                    context.startActivity(intent)
+                                    if (context is RecipeDetailsActivity1) {
+                                        context.finish()
+                                    }}) {
                                     Icon(Icons.Default.ArrowForward, contentDescription = "Add")
                                 }
                             }
@@ -158,7 +176,7 @@ fun AppContent6(context: Context, recipeId: Int) {
             }
         }
     } else {
-        // Obsłuż przypadek, gdy przepis nie został znaleziony
+        // Handle case where the recipe is not found
         Box(
             modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.Center
@@ -167,3 +185,4 @@ fun AppContent6(context: Context, recipeId: Int) {
         }
     }
 }
+

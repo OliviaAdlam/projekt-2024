@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "194022611211",
+    "project_id": "abcd-abcfc",
+    "storage_bucket": "abcd-abcfc.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:194022611211:android:7d58b57e87a026a3f22a0e",
+        "android_client_info": {
+          "package_name": "com.example.projectaplikacja"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCLrEVyVmNSlZzVWIHFRKV-qeOU26JwXj0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -1,5 +1,6 @@
 package com.example.projectaplikacja.Ekrany
 
+import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import androidx.appcompat.app.AppCompatActivity
@@ -53,10 +54,22 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.example.projectaplikacja.Models.AuthManager
 import com.example.projectaplikacja.R
 import com.example.projectaplikacja.ui.theme.ProjectAplikacjaTheme
 
 class LoginActivity : ComponentActivity() {
+    private val authManager = AuthManager(this)
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == GOOGLE_SIGN_IN_REQUEST_CODE) {
+            authManager.handleGoogleSignInResult(data)
+        }
+    }
+
+    companion object {
+        private const val GOOGLE_SIGN_IN_REQUEST_CODE = 1001
+    }
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
@@ -66,7 +79,7 @@ class LoginActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    AppContent3(this)
+                    AppContent3(authManager, this, GOOGLE_SIGN_IN_REQUEST_CODE)
                 }
             }
         }
@@ -74,13 +87,17 @@ class LoginActivity : ComponentActivity() {
 }
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AppContent3(context: Context) {
+fun AppContent3(authManager: AuthManager, context: Context, requestCode: Int) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var isEmailValid by remember { mutableStateOf(false) }
     var isPasswordValid by remember { mutableStateOf(false) }
     val barColor = if (isEmailValid) Color.Green else Color.Red
     val PassbarColor = if (isPasswordValid) Color.Green else Color.Red
+
+    val signInWithGoogle = {
+        authManager.getGoogleSignInAccount(context as Activity, requestCode)
+    }
 
     Box(
         modifier = Modifier.fillMaxSize(),
@@ -97,12 +114,15 @@ fun AppContent3(context: Context) {
                         title = { Text(text = "Logowanie") },
                         navigationIcon = {
                             IconButton(onClick = { val intent = Intent(context,MainActivity::class.java)
-                                context.startActivity(intent) }) {
+                                context.startActivity(intent)
+                                if (context is MainActivity) {
+                                    context.finish()
+                                }}) {
                                 Icon(Icons.Default.ArrowBack, contentDescription = "Return")
                             }
                         },
                         actions = {
-                            // Dodaj akcje tutaj, jeśli potrzebujesz
+
                         }
                     )
                 },
@@ -159,11 +179,19 @@ fun AppContent3(context: Context) {
                         ) {
                             FilledTonalButton(
                                 onClick = {
-                                    if (email.equals("olivia@adlam.com") && password.equals("Olivia123")){
-                                        val intent = Intent(context,MainLoggedInActivity::class.java)
-                                        context.startActivity(intent)
-                                        Toast.makeText(context,"Zalogowano", Toast.LENGTH_SHORT)
-                                    }
+                                    authManager.signInWithEmailPassword(email,password)
+                                        .addOnSuccessListener {
+                                            val intent = Intent(context,MainLoggedInActivity::class.java)
+                                            context.startActivity(intent)
+                                            if (context is LoginActivity) {
+                                                context.finish()
+                                            }
+                                            Toast.makeText(context,"Zalogowano", Toast.LENGTH_SHORT).show()
+                                        }
+                                        .addOnFailureListener{e ->
+                                            Toast.makeText(context,"Error ${e.message}", Toast.LENGTH_SHORT).show()
+
+                                        }
                                 }) {
                                 Text("Zaloguj")
                             }
@@ -172,13 +200,22 @@ fun AppContent3(context: Context) {
                             TextButton (
                                 modifier = Modifier.fillMaxWidth(),
                                 onClick = { val intent = Intent(context,RegisterActivity::class.java)
-                                    context.startActivity(intent) }
+                                    context.startActivity(intent)
+                                    if (context is LoginActivity) {
+                                        context.finish()
+                                    }}
                             ) {
                                 Text("Stwórz konto")
                             }
                             TextButton(
                                 modifier = Modifier.fillMaxWidth(),
-                                onClick = { /* Akcja dla zapomnianego hasła */ }
+                                onClick = { authManager.sendPasswordResetEmail(email).addOnCompleteListener {task ->
+                                    if (task.isSuccessful) {
+                                        Toast.makeText(context, "Email został wysłany", Toast.LENGTH_SHORT).show()
+                                    }else{
+                                        Toast.makeText(context, "Niepowodzenie", Toast.LENGTH_SHORT).show()
+                                    }
+                                } }
                             ) {
                                 Text("Zapomniałeś hasło?")
                             }
@@ -187,7 +224,7 @@ fun AppContent3(context: Context) {
                         Spacer(modifier = Modifier.height(16.dp))
                         Text(text = "Zaloguj się za pomocą google")
                         Spacer(modifier = Modifier.height(16.dp))
-                        IconButton(onClick = {}) {
+                        IconButton(onClick = signInWithGoogle) {
                             Icon(
                                 imageVector = Icons.Rounded.ExitToApp,
                                 contentDescription = "Google"
@@ -199,6 +236,7 @@ fun AppContent3(context: Context) {
         }
     }
 }
+
 fun checkPasswordValidity(password: String): Boolean {
     if (password.length < 8) return false
     var containsUpperCase = false
@@ -215,6 +253,8 @@ fun checkPasswordValidity(password: String): Boolean {
 
     return containsUpperCase && containsLowerCase && containsDigit
 }
+
+
 
 
 

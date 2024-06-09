@@ -8,6 +8,7 @@ import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.viewModels
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -48,6 +49,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -60,11 +62,21 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.projectaplikacja.R
+import com.example.projectaplikacja.Viewmodels.FirebaseViewModel
+import com.example.projectaplikacja.Viewmodels.FirebaseViewModelFactory
 import com.example.projectaplikacja.ui.theme.ProjectAplikacjaTheme
 
 class LoggedInRecipeDetailsActivity2 : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        val factory = FirebaseViewModelFactory(application)
+        val viewModel: FirebaseViewModel by viewModels { factory }
+
+        // Fetch recipe ID from intent
+        val recipeId = intent.getStringExtra("RECIPE_ID") ?: ""
+
+        // Fetch the recipe by ID
+        viewModel.fetchRecipeById(recipeId)
         setContent {
             ProjectAplikacjaTheme {
                 // A surface container using the 'background' color from the theme
@@ -72,8 +84,8 @@ class LoggedInRecipeDetailsActivity2 : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    val recipeId = intent.getIntExtra("RECIPE_ID", -1)
-                    AppContent9(this,recipeId)
+
+                    AppContent9(this,viewModel)
                 }
             }
         }
@@ -81,8 +93,8 @@ class LoggedInRecipeDetailsActivity2 : ComponentActivity() {
 }
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AppContent9(context: Context, recipeId: Int) {
-    val recipe = recipes.find { it.id == recipeId }
+fun AppContent9(context: Context, viewModel: FirebaseViewModel) {
+    val recipe by viewModel.singleRecipeState.collectAsState()
 
     if (recipe != null) {
         Box(
@@ -97,7 +109,7 @@ fun AppContent9(context: Context, recipeId: Int) {
                 Scaffold(
                     topBar = {
                         TopAppBar(
-                            title = { Text(text = recipe.name) },
+                            title = { Text(text = recipe!!.name) },
                             navigationIcon = {
                                 IconButton(onClick = { context.startActivity(Intent(context, MainLoggedInActivity::class.java)) }) {
                                     Icon(Icons.Default.ArrowBack, contentDescription = "Return")
@@ -115,7 +127,7 @@ fun AppContent9(context: Context, recipeId: Int) {
                             ) {
                                 item {
                                     Text(fontSize = 20.sp ,text = "Sposób przyrządzenia:")
-                                    Text(text = recipe.steps)
+                                    Text(text = recipe!!.steps)
 
 
                                 }
@@ -130,8 +142,11 @@ fun AppContent9(context: Context, recipeId: Int) {
                             ) {
                                 IconButton(onClick = {
                                     val intent = Intent(context, LoggedInRecipeDetailsActivity1::class.java)
-                                    intent.putExtra("RECIPE_ID", recipeId)
-                                    context.startActivity(intent) }) {
+                                    intent.putExtra("RECIPE_ID", recipe!!.id)
+                                    context.startActivity(intent)
+                                    if (context is LoggedInRecipeDetailsActivity2) {
+                                        context.finish()
+                                    }}) {
                                     Icon(Icons.Default.ArrowBack, contentDescription = "Add")
                                 }
                             }
@@ -146,7 +161,7 @@ fun AppContent9(context: Context, recipeId: Int) {
             modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.Center
         ) {
-            Text(text = "Przepis o ID $recipeId nie został znaleziony")
+            Text(text = "Przepis o ID $recipe.id nie został znaleziony")
         }
     }
 }

@@ -8,6 +8,7 @@ import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.viewModels
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -28,6 +29,7 @@ import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.rounded.ExitToApp
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Divider
@@ -55,11 +57,18 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.example.projectaplikacja.Models.Recipe
 import com.example.projectaplikacja.R
+import com.example.projectaplikacja.Viewmodels.FirebaseViewModel
+import com.example.projectaplikacja.Viewmodels.FirebaseViewModelFactory
 import com.example.projectaplikacja.ui.theme.ProjectAplikacjaTheme
+import com.google.firebase.auth.FirebaseAuth
 
 class AddPositionActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
+        val viewModel: FirebaseViewModel by viewModels {
+            FirebaseViewModelFactory(application)
+        }
         super.onCreate(savedInstanceState)
         setContent {
             ProjectAplikacjaTheme {
@@ -68,7 +77,7 @@ class AddPositionActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    AppContent5(this)
+                    AppContent5(this, viewModel)
                 }
             }
         }
@@ -76,7 +85,7 @@ class AddPositionActivity : ComponentActivity() {
 }
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AppContent5(context: Context) {
+fun AppContent5(context: Context, viewModel: FirebaseViewModel) {
     var nazwa by remember { mutableStateOf("") }
     var rodzaj_kuchni by remember { mutableStateOf("") }
     var czas_przygotowania by remember { mutableStateOf("") }
@@ -104,7 +113,7 @@ fun AppContent5(context: Context) {
                             }
                         },
                         actions = {
-                            // Dodaj akcje tutaj, jeśli potrzebujesz
+                            // Add actions here if needed
                         }
                     )
                 },
@@ -161,47 +170,57 @@ fun AppContent5(context: Context) {
                             Spacer(modifier = Modifier.width(8.dp))
                             Checkbox(
                                 checked = wegetariańskie,
-                                onCheckedChange = { wegetariańskie = it },
-                                modifier = Modifier.padding(horizontal = 8.dp)
+                                onCheckedChange = { wegetariańskie = it }
                             )
                         }
+                        Spacer(modifier = Modifier.height(8.dp))
                         Row(modifier = Modifier.fillMaxWidth()) {
                             TextField(
                                 value = składniki,
                                 onValueChange = {
                                     składniki = it
                                 },
-                                label = { Text("Składniki (format: nazwa1 ilość1, nazwa2 ilość2)") },
+                                label = { Text("Składniki") },
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .height(70.dp)
+                                    .height(56.dp)
                             )
                         }
-                        Spacer(modifier = Modifier.height(16.dp))
+                        Spacer(modifier = Modifier.height(8.dp))
                         Row(modifier = Modifier.fillMaxWidth()) {
                             TextField(
                                 value = sposób_przygotowania,
                                 onValueChange = {
                                     sposób_przygotowania = it
                                 },
-                                label = { Text("Sposób przygotowania w minutach") },
+                                label = { Text("Sposób przygotowania") },
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .height(56.dp)
                             )
                         }
                         Spacer(modifier = Modifier.height(16.dp))
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.Center
-                        ) {
-                            FilledTonalButton(
-                                onClick ={val intent = Intent(context,MainLoggedInActivity::class.java)
-                                    context.startActivity(intent)
-                                    Toast.makeText(context,"Dodano pozycję",Toast.LENGTH_SHORT)
-                                }) {
-                                Text("Dodaj")
+                        Button(
+                            onClick = {
+                                val userId = FirebaseAuth.getInstance().currentUser?.uid ?: ""
+                                val recipe = Recipe(
+                                    name = nazwa,
+                                    cuisine = rodzaj_kuchni,
+                                    preparationTime = czas_przygotowania.toIntOrNull() ?: 0,
+                                    vegeterian = wegetariańskie,
+                                    ingredients = składniki,
+                                    steps = sposób_przygotowania,
+                                    userId = userId
+                                )
+                                viewModel.addRecipe(recipe)
+                                val intent = Intent(context, MainLoggedInActivity::class.java)
+                                context.startActivity(intent)
+                                if (context is AddPositionActivity) {
+                                    context.finish()
+                                }
                             }
+                        ) {
+                            Text("Dodaj produkt")
                         }
                     }
                 }
@@ -209,7 +228,6 @@ fun AppContent5(context: Context) {
         }
     }
 }
-
 
 
 

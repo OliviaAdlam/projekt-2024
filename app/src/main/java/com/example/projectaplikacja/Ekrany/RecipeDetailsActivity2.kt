@@ -48,6 +48,8 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -59,7 +61,10 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.projectaplikacja.R
+import com.example.projectaplikacja.Viewmodels.RoomViewModel
+import com.example.projectaplikacja.Viewmodels.RoomViewModelFactory
 import com.example.projectaplikacja.ui.theme.ProjectAplikacjaTheme
 
 class RecipeDetailsActivity2 : ComponentActivity() {
@@ -73,7 +78,10 @@ class RecipeDetailsActivity2 : ComponentActivity() {
                     color = MaterialTheme.colorScheme.background
                 ) {
                     val recipeId = intent.getIntExtra("RECIPE_ID", -1)
-                    AppContent7(this,recipeId)
+                    val viewModel: RoomViewModel = viewModel(
+                        factory = RoomViewModelFactory(application)
+                    )
+                    AppContent7(this,recipeId,viewModel)
                 }
             }
         }
@@ -81,8 +89,12 @@ class RecipeDetailsActivity2 : ComponentActivity() {
 }
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AppContent7(context: Context, recipeId: Int) {
-    val recipe = recipes.find { it.id == recipeId }
+fun AppContent7(context: Context, recipeId: Int, viewModel: RoomViewModel) {
+    val recipe by viewModel.singleRecipeState.collectAsState()
+
+    LaunchedEffect(recipeId) {
+        viewModel.fetchRecipeById(recipeId)
+    }
 
     if (recipe != null) {
         Box(
@@ -97,7 +109,7 @@ fun AppContent7(context: Context, recipeId: Int) {
                 Scaffold(
                     topBar = {
                         TopAppBar(
-                            title = { Text(text = recipe.name) },
+                            title = { Text(text = recipe!!.name) },
                             navigationIcon = {
                                 IconButton(onClick = { context.startActivity(Intent(context, MainActivity::class.java)) }) {
                                     Icon(Icons.Default.ArrowBack, contentDescription = "Return")
@@ -115,7 +127,7 @@ fun AppContent7(context: Context, recipeId: Int) {
                             ) {
                                 item {
                                     Text(fontSize = 20.sp ,text = "Sposób przyrządzenia:")
-                                    Text(text = recipe.steps)
+                                    Text(text = recipe!!.steps)
 
 
                                 }

@@ -1,73 +1,63 @@
 package com.example.projectaplikacja.Ekrany
 
-
+import android.app.Application
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.wrapContentSize
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCompositionContext
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.core.content.ContextCompat.startActivity
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.projectaplikacja.Models.RoomRecipe
+import com.example.projectaplikacja.Viewmodels.RoomViewModel
+import com.example.projectaplikacja.Viewmodels.RoomViewModelFactory
+import com.example.projectaplikacja.Viewmodels.SortType
 import com.example.projectaplikacja.ui.theme.ProjectAplikacjaTheme
-
-
-data class Recipe(val id: Int, val name: String, val steps: String, val preparationTime: Int, val cuisine: String, val ingredients: String )
-
-val recipes = listOf(
-    Recipe(1,"Pancakes", "Delicious pancakes recipe", 20, "American","pancake 250 ml, pancake2 65g"),
-    Recipe(2,"Spaghetti Carbonara", "Classic Italian pasta dish", 30, "Italian","pasta"),
-    Recipe(3,"Caesar Salad", "Fresh and tasty salad", 15, "Italian","lettuce"),
-    // Add more recipes as needed
-)
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
+            val context = LocalContext.current
+            val viewModel: RoomViewModel = viewModel(
+                factory = RoomViewModelFactory(context.applicationContext as Application)
+            )
             ProjectAplikacjaTheme {
-                // A surface container using the 'background' color from the theme
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    AppContent(this)
+                    AppContent(context, viewModel)
                 }
             }
         }
     }
 }
 
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AppContent(context: Context) {
+fun AppContent(context: Context, viewModel: RoomViewModel) {
     var expanded by remember { mutableStateOf(false) }
     var searchText by remember { mutableStateOf("") }
+
+    val recipes by viewModel.recipesState.collectAsState()
+
+
+    LaunchedEffect(searchText) {
+        viewModel.setFilter(searchText)
+    }
 
     Box {
         Scaffold(
@@ -80,9 +70,11 @@ fun AppContent(context: Context) {
                         }
                     },
                     actions = {
-                        // Add actions here
-                        IconButton(onClick = { val intent = Intent(context,LoginActivity::class.java)
-                            context.startActivity(intent) }) {
+                        IconButton(onClick = { val intent = Intent(context, LoginActivity::class.java)
+                            context.startActivity(intent)
+                            if (context is MainActivity) {
+                                context.finish()
+                            }}) {
                             Icon(
                                 imageVector = Icons.Default.Person,
                                 contentDescription = "Login"
@@ -92,13 +84,12 @@ fun AppContent(context: Context) {
                 )
             },
             content = { paddingValues ->
-                // Content of your app goes here
                 LazyColumn(
                     modifier = Modifier.padding(paddingValues)
                 ) {
                     items(recipes.size) { index ->
                         val recipe = recipes[index]
-                        RecipeItem(recipe,context)
+                        RecipeItem(recipe, context)
                     }
                 }
             }
@@ -108,35 +99,61 @@ fun AppContent(context: Context) {
             Box(
                 modifier = Modifier
                     .padding(start = 16.dp)
-                    .wrapContentSize() // Make the Box only wrap its content
+                    .wrapContentSize()
             ) {
                 DropdownMenu(
                     expanded = expanded,
                     onDismissRequest = { expanded = false },
                 ) {
-                    DropdownMenuItem( text = {Text(text = "Alfabetycznie")},
-                        onClick = { /* Handle menu item click */ }
+                    DropdownMenuItem(
+                        text = { Text(text = "Alfabetycznie") },
+                        onClick = {
+                            viewModel.setSortType(SortType.ALPHABETICAL)
+                            expanded = false
+                        }
                     )
-                    DropdownMenuItem( text = {Text(text = "Czas przygotowania rosnąco")},
-                        onClick = { /* Handle menu item click */ }
+                    DropdownMenuItem(
+                        text = { Text(text = "Czas przygotowania rosnąco") },
+                        onClick = {
+                            viewModel.setSortType(SortType.PREPARATION_TIME_ASC)
+                            expanded = false
+                        }
                     )
-                    DropdownMenuItem( text = {Text(text = "Czas przygotowania malejąco")},
-                        onClick = { /* Handle menu item click */ }
+                    DropdownMenuItem(
+                        text = { Text(text = "Czas przygotowania malejąco") },
+                        onClick = {
+                            viewModel.setSortType(SortType.PREPARATION_TIME_DESC)
+                            expanded = false
+                        }
                     )
-                    DropdownMenuItem( text = {Text(text = "Rodzaj kuchni alfabetycznie")},
-                        onClick = { /* Handle menu item click */ }
+                    DropdownMenuItem(
+                        text = { Text(text = "Rodzaj kuchni alfabetycznie") },
+                        onClick = {
+                            viewModel.setSortType(SortType.CUISINE_ALPHABETICAL)
+                            expanded = false
+                        }
                     )
-                    DropdownMenuItem( text = {Text(text = "Tylko wegetariańskie")},
-                        onClick = { /* Handle menu item click */ }
+                    DropdownMenuItem(
+                        text = { Text(text = "Tylko wegetariańskie") },
+                        onClick = {
+                            viewModel.setSortType(SortType.VEGETARIAN_ONLY)
+                            expanded = false
+                        }
                     )
                     Row(
-                        verticalAlignment = Alignment.CenterVertically
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .padding(8.dp)
+                            .fillMaxWidth()
                     ) {
                         Icon(Icons.Default.Search, contentDescription = "Search")
                         Spacer(modifier = Modifier.width(8.dp))
                         TextField(
                             value = searchText,
-                            onValueChange = { searchText = it },
+                            onValueChange = { newText ->
+                                searchText = newText
+                                viewModel.setFilter(newText)
+                            },
                             placeholder = {
                                 Text("Szukaj")
                             },
@@ -144,17 +161,14 @@ fun AppContent(context: Context) {
                             modifier = Modifier.fillMaxWidth()
                         )
                     }
-
                 }
             }
         }
     }
 }
 
-
-
 @Composable
-fun RecipeItem(recipe: Recipe, context: Context) {
+fun RecipeItem(recipe: RoomRecipe, context: Context) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -166,27 +180,28 @@ fun RecipeItem(recipe: Recipe, context: Context) {
         ) {
             Text(
                 text = recipe.name,
-                style = MaterialTheme.typography.headlineLarge, // Using h6 style for bigger and bold text
+                style = MaterialTheme.typography.headlineLarge,
             )
             Text(text = "Czas przygotowania: ${recipe.preparationTime} minut")
             Row(
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Spacer(modifier = Modifier.weight(1f)) // Spacer wypełniający dostępną przestrzeń
+                Spacer(modifier = Modifier.weight(1f))
                 Text(
                     text = "Rodzaj kuchni: ${recipe.cuisine}",
-                    modifier = Modifier.padding(end = 8.dp) // Odstęp od prawej strony
+                    modifier = Modifier.padding(end = 8.dp)
                 )
             }
-
         }
     }
 }
+
 fun openRecipeDetailsActivity(context: Context, recipeId: Int) {
     val intent = Intent(context, RecipeDetailsActivity1::class.java)
     intent.putExtra("RECIPE_ID", recipeId)
     context.startActivity(intent)
+
+    if (context is MainActivity) {
+        context.finish()
+    }
 }
-
-
-

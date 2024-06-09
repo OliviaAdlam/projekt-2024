@@ -5,6 +5,7 @@ import android.content.Intent
 import android.health.connect.datatypes.units.Length
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
+import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -54,10 +55,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.example.projectaplikacja.Models.AuthManager
 import com.example.projectaplikacja.R
 import com.example.projectaplikacja.ui.theme.ProjectAplikacjaTheme
 
 class RegisterActivity : ComponentActivity() {
+    private val authManager = AuthManager(this)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
@@ -67,7 +70,7 @@ class RegisterActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    AppContent4(this)
+                    AppContent4(this, authManager)
                 }
             }
         }
@@ -75,7 +78,7 @@ class RegisterActivity : ComponentActivity() {
 }
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AppContent4(context: Context) {
+fun AppContent4(context: Context, authManager: AuthManager) {
     var email by remember { mutableStateOf("") }
     var password1 by remember { mutableStateOf("") }
     var password2 by remember { mutableStateOf("") }
@@ -101,7 +104,10 @@ fun AppContent4(context: Context) {
                         title = { Text(text = "Rejestracja") },
                         navigationIcon = {
                             IconButton(onClick = { val intent = Intent(context,LoginActivity::class.java)
-                                context.startActivity(intent) }) {
+                                context.startActivity(intent)
+                                if (context is RegisterActivity) {
+                                    context.finish()
+                                }}) {
                                 Icon(Icons.Default.ArrowBack, contentDescription = "Return")
                             }
                         },
@@ -185,9 +191,19 @@ fun AppContent4(context: Context) {
                             FilledTonalButton(
                                 onClick ={
                                     if (isEmailValid == true && isPassword1Valid == true && isPassword2Valid == true){
-                                        val intent = Intent(context,LoginActivity::class.java)
-                                        context.startActivity(intent)
-                                        Toast.makeText(context,"Zarejestrowano",Toast.LENGTH_SHORT)
+                                        authManager.signUpWithEmailPassword(email,password1)
+                                            .addOnSuccessListener {
+                                                val intent = Intent(context,LoginActivity::class.java)
+                                                context.startActivity(intent)
+                                                if (context is RegisterActivity) {
+                                                    context.finish()
+                                                }
+                                                Toast.makeText(context,"Zarejestrowano", Toast.LENGTH_SHORT).show()
+                                            }
+                                            .addOnFailureListener{e ->
+                                                Toast.makeText(context,"Error ${e.message}", Toast.LENGTH_SHORT).show()
+
+                                            }
                                     }
                                     else if (isEmailValid==false){
                                         Toast.makeText(context,"Podaj poprawny email",Toast.LENGTH_SHORT)
@@ -205,14 +221,7 @@ fun AppContent4(context: Context) {
                         Spacer(modifier = Modifier.height(16.dp))
                         Divider(modifier = Modifier.fillMaxWidth(), color = Color.Black, thickness = 2.dp)
                         Spacer(modifier = Modifier.height(16.dp))
-                        Text(text = "Zarejestruj się za pomocą google")
-                        Spacer(modifier = Modifier.height(16.dp))
-                        IconButton(onClick = {}) {
-                            Icon(
-                                imageVector = Icons.Rounded.ExitToApp,
-                                contentDescription = "Google"
-                            )
-                        }
+
                     }
                 }
             )
